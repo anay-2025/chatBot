@@ -18,9 +18,12 @@ app.post('/api/stripe', express.raw({type: 'application/json'}),
 stripeWebhooks)
 
 // middlewares
-app.use(cors())
-app.use(express.json())
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true
+}));
 
+app.use(express.json());
 // routes
 app.get('/', (req, res) => res.send('server is live!'))
 app.use('/api/user', userRouter);
