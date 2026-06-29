@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useAppContext } from '../context/AppContext'
+import toast from 'react-hot-toast'
 
 const Login = () => {
 
@@ -9,13 +11,25 @@ const Login = () => {
         email: '',
         password: ''
     })
+    const {axios, setToken} = useAppContext()
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const url = (state === "login") ? '/api/user/login' : '/api/user/register'
 
-        console.log(formData);
-
-        // API call here
+        try {
+            const {data} = await axios.post(url, formData)
+            if(data.success) {
+                setToken(data.token)
+                localStorage.setItem('token', data.token)
+                toast.success(state === "login" ? "Logged in successfully" : "Account created successfully") 
+            }
+            else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
     }
 
     const handleChange = (e) => {
@@ -121,15 +135,6 @@ const Login = () => {
                     className='outline-none flex-1'
                     required
                 />
-            </div>
-
-            <div className='text-right mt-3'>
-                <button
-                    type='button'
-                    className='text-sm text-purple-600 hover:text-purple-800 cursor-pointer'
-                >
-                    Forgot password?
-                </button>
             </div>
 
             <button

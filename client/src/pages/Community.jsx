@@ -1,20 +1,37 @@
 import React, { useEffect, useState } from 'react'
 import { dummyPublishedImages } from '../assets/assets';
 import Loading from './Loading';
+import { useAppContext } from '../context/AppContext.jsx';
+import toast from 'react-hot-toast';
 
 const Community = () => {
   
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const {axios, token} = useAppContext()
 
   const fetchImages = async () => {
-    setImages(dummyPublishedImages);
+    try {
+      const {data} = await axios.get('/api/user/published-images', {
+        headers: {Authorization: token}
+      })
+      if(data.success) {
+        setImages(data.images)
+      }
+      else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
     setLoading(false);
   }
 
   useEffect(() => {
-    fetchImages();
-  }, [])
+    if(token) {
+      fetchImages();
+    }
+  }, [token])
 
   if(loading) return (<Loading/>);
 
@@ -35,6 +52,25 @@ const Community = () => {
               <p className='absolute bottom-0 right-0 text-xs bg-black/50
               backdrop-blur text-white px-4 py-1 rounded-tl-xl opacity-0
               group-hover:opacity-100 transition duration-300'>Created By {image.userName}</p>
+               {image.isOwner && (
+                <button onClick={(e) => {
+                    e.preventDefault();
+                    toast.promise(
+                        axios.post('/api/message/delete-image', 
+                            { chatId: image.chatId, messageId: image.messageId },
+                            { headers: { Authorization: token } }
+                        ).then(({ data }) => {
+                            if (data.success) setImages(prev => prev.filter((_, i) => i !== index));
+                            else throw new Error(data.message);
+                        }),
+                        { loading: 'Removing...', success: 'Removed!', error: 'Failed to remove' }
+                    )
+                }} className='absolute bottom-0 left-0 text-xs bg-red-500/80
+                backdrop-blur text-white px-4 py-1 rounded-tr-xl opacity-0
+                group-hover:opacity-100 transition duration-300'>
+                    Delete
+                </button>
+            )}
             </a>
           ))}
         </div>

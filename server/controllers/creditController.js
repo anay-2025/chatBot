@@ -1,5 +1,6 @@
 import Transaction from "../models/Transaction.js"
 import Stripe from "stripe"
+import User from "../models/User.js";
 
 const plans = [
     {
@@ -73,8 +74,8 @@ export const purchasePlan = async (req, res) => {
                 },
             ],
             mode: 'payment',
-            success_url: `${origin}/loading`,
-            cancel_url: `${origin}`,
+            success_url: `${origin}/credits?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/credits`,
             metadata: {transactionId: transaction._id.toString(), appId: 'merngpt'},
             expires_at: Math.floor(Date.now() / 1000) + 30*60,  // expires in 30 mins
         });
@@ -83,5 +84,33 @@ export const purchasePlan = async (req, res) => {
 
     } catch (error) {
         res.json({success: false, message: error.message})
+    }
+}
+
+export const verifyPayment = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === 'paid') {
+            const { transactionId, appId } = session.metadata;
+
+            if (appId === 'merngpt') {
+                const transaction = await Transaction.findOne({ _id: transactionId, isPaid: false });
+
+                if (transaction) {
+                    await User.updateOne({ _id: transaction.userId }, { $inc: { credits: transaction.credits } });
+                    transaction.isPaid = true;
+                    await transaction.save();
+                }
+            }
+            res.json({ success: true });
+        } else {
+            res.json({ success: false, message: 'Payment not completed' });
+        }
+    } catch (error) {
+        res.json({ success: false, message: error.message });
     }
 }

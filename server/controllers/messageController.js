@@ -1,10 +1,10 @@
 import axios from "axios"
-import OpenAI from "openai"  // ✅ add this
+import OpenAI from "openai"  
 import Chat from "../models/Chat.js"
 import User from "../models/User.js"
 import imagekit from "../config/imageKit.js"
 
-// ✅ initialize the client (Gemini via OpenAI-compatible SDK)
+
 const openai = new OpenAI({
     apiKey: process.env.GEMINI_API_KEY,
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
@@ -23,7 +23,7 @@ export const textMessageController = async (req, res) => {
         chat.messages.push({role: 'user', content: prompt, timestamp: Date.now(), isImage: false})
 
         const {choices} = await openai.chat.completions.create({
-            model: "gemini-2.5-flash",  // ✅ also corrected model name
+            model: "gemini-2.5-flash",  
             messages: [{ role: "user", content: prompt }],
         });
 
@@ -52,12 +52,12 @@ export const imageMessageController = async (req, res) => {
         
         const encodedPrompt = encodeURIComponent(prompt);
 
-        // ✅ no newline/spaces inside the template literal
+        
         const generatedImageUrl = `${process.env.IMAGEKIT_URL_ENDPOINT}/ik-genimg-prompt-${encodedPrompt}/quickgpt/${Date.now()}.png?tr=w-800,h-800`;
 
         const aiIMageResponse = await axios.get(generatedImageUrl, {responseType: "arraybuffer"})
 
-        // ✅ added the missing comma after ;base64
+        
         const base64Image = `data:image/png;base64,${Buffer.from(aiIMageResponse.data, "binary").toString('base64')}`
 
         const uploadResponse = await imagekit.files.upload({
@@ -76,5 +76,26 @@ export const imageMessageController = async (req, res) => {
 
     } catch (error) {
         res.json({success: false, message: error.message})      
+    }
+}
+
+// for deleteing the image from community 
+export const deleteImage = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { chatId, messageId } = req.body;
+
+        const chat = await Chat.findOne({ _id: chatId, userId });
+        if (!chat) return res.json({ success: false, message: 'Chat not found' });
+
+        const message = chat.messages.id(messageId);
+        if (!message) return res.json({ success: false, message: 'Message not found' });
+
+        message.isPublished = false;
+        await chat.save();
+
+        res.json({ success: true, message: 'Image removed from community' });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
     }
 }

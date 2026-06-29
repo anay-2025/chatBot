@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
-import { Chat } from "openai/resources/index.mjs";
+import Chat from "../models/Chat.js";
 
 // generate jwt
 const generateToken = (id) => {
@@ -63,8 +63,11 @@ export const getUser = async (req, res) => {
 // api to get published images all
 export const getPublishedImages = async (req, res) => {
     try {
+        const userId = req.user?._id?.toString();
+        console.log('requser->', req.user)
+        console.log('logged in userId:', userId)
         const publishedImageMessages = await Chat.aggregate([
-            {$unwind : "$messages"},
+            { $unwind: "$messages" },
             {
                 $match: {
                     "messages.isImage": true,
@@ -74,13 +77,22 @@ export const getPublishedImages = async (req, res) => {
             {
                 $project: {
                     _id: 0,
+                    chatId: "$_id",
+                    messageId: "$messages._id",
                     imageUrl: "$messages.content",
-                    userName: "$userName"
+                    userName: "$userName",
+                    ownerId: { $toString: "$userId" }  // ← capital S in toString
                 }
             }
         ])
-        res.json({success:true, images: publishedImageMessages.reverse()})
+
+        const images = publishedImageMessages.reverse().map(img => ({
+            ...img,
+            isOwner: img.ownerId === userId
+        }));
+
+        res.json({ success: true, images });
     } catch (error) {
-        return res.json({success:false, message:error.message})
+        return res.json({ success: false, message: error.message });
     }
 }

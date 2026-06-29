@@ -6,6 +6,7 @@ export const protect = async (req, res, next) => {
     try {
 
         const token = req.headers.authorization;
+        console.log('token recieved -> ', token)
 
         if (!token) {
             return res.status(401).json({
@@ -15,9 +16,9 @@ export const protect = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+        console.log('decoded:', decoded)
         const user = await User.findById(decoded.id);
-
+        console.log('user found:', user)
         if (!user) {
             return res.status(401).json({
                 success: false,

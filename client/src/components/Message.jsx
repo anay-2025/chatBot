@@ -28,13 +28,13 @@ const Message = (props) => {
         <div className='inline-flex flex-col gap-2 p-2 px-4 bg-primary/20 
           dark:bg-[#57317C]/30 border border-[#80609F]/30 rounded-md max-w-2xl my-4'>
           {props.message.isImage ? (
-            <img src={ele} alt='img' className='w-full max-w-md mt-2 rounded-md'/>
+            <img src={ele} alt='img' className='w-full max-w-md mt-2 rounded-md' onError={(e) => console.log('Image src:', ele)}/>
           ) : (
             <div className='text-sm dark:text-primary reset-tw'>
               <Markdown>{ele}</Markdown>
             </div>
           )}
-          <span>{time}</span>
+          <span className='text-xs text-gray-400 dark:text-[#B1A6C0]'>{time}</span>
         </div>
       )}
     </div>
